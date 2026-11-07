@@ -443,8 +443,8 @@ main {
 .chart-wrap { min-height: 260px; }
 .bar-row { display: grid; grid-template-columns: 108px 1fr 54px; gap: 10px; align-items: center; margin: 7px 0; font-size: 12px; }
 .bar-row .nm { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bar-row .track { height: 15px; background: rgba(148, 179, 212, 0.08); border-radius: 5px; overflow: hidden; }
-.bar-row .fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--bc) 60%, transparent), var(--bc)); }
+.bar-row .track { display: block; height: 15px; background: rgba(148, 179, 212, 0.08); border-radius: 5px; overflow: hidden; }
+.bar-row .fill { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--bc) 60%, transparent), var(--bc)); }
 .bar-row .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); font-weight: 550; }
 .chart-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--faint); margin: 8px 0 0 118px; }
 

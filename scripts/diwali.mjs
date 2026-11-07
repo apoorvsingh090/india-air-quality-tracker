@@ -72,9 +72,10 @@ function buildYear(bulletins, impactBulletin) {
   });
 
   const scored = cities.filter((c) => c.baselineAqi != null && c.diwaliAqi != null);
+  const baselineOnly = cities.filter((c) => c.baselineAqi != null);
   const summary = {
     citiesCompared: scored.length,
-    avgBaselineAqi: round(mean(scored.map((c) => c.baselineAqi))),
+    avgBaselineAqi: round(mean(baselineOnly.map((c) => c.baselineAqi))),
     avgDiwaliAqi: round(mean(scored.map((c) => c.diwaliAqi))),
     avgChangePct: round(mean(scored.map((c) => c.changePct))),
     citiesUp20: scored.filter((c) => c.changePct > 20).length,

@@ -21,7 +21,7 @@ Using the official CPCB bulletins for 13–19 October 2025 (baseline) and 21 Oct
 | Metric | Value |
 | --- | --- |
 | Cities compared | 66 |
-| Average pre-Diwali AQI | 122 |
+| Average pre-Diwali AQI | 121 |
 | Average Diwali-night AQI | 176 |
 | Average change | **+43.2%** |
 | Cities up more than 20% | **48 of 66** |
