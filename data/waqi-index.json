@@ -1,0 +1,47 @@
+{
+  "delhi": {
+    "idx": 2556,
+    "name": "R.K. Puram, Delhi",
+    "slug": "delhi"
+  },
+  "mumbai": {
+    "idx": 13707,
+    "name": "Navy Nagar-Colaba, Mumbai",
+    "slug": "mumbai"
+  },
+  "bengaluru": {
+    "idx": 8686,
+    "name": "City Railway Station, Bangalore",
+    "slug": "bangalore"
+  },
+  "chennai": {
+    "idx": 13737,
+    "name": "Royapuram, Chennai",
+    "slug": "chennai"
+  },
+  "kolkata": {
+    "idx": 12457,
+    "name": "Fort William, Kolkata",
+    "slug": "kolkata"
+  },
+  "hyderabad": {
+    "idx": 14125,
+    "name": "Somajiguda, Hyderabad",
+    "slug": "hyderabad"
+  },
+  "pune": {
+    "idx": 3760,
+    "name": "Shivajinagar, Pune",
+    "slug": "pune"
+  },
+  "ahmedabad": {
+    "idx": 8192,
+    "name": "Maninagar, Ahmedabad",
+    "slug": "ahmedabad"
+  },
+  "kanpur": {
+    "idx": 13727,
+    "name": "FTI Kidwai Nagar, Kanpur",
+    "slug": "kanpur"
+  }
+}

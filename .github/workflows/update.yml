@@ -1,0 +1,47 @@
+name: Update air quality data
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aqi-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch source data
+        run: node scripts/fetch-data.mjs --discover
+
+      - name: Rebuild Diwali study
+        run: node scripts/diwali.mjs
+
+      - name: Commit updated data
+        run: |
+          git config user.name "aqi-bot"
+          git config user.email "aqi-bot@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No data changes"
+          else
+            git commit -m "data: hourly air quality update ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+            git push
+          fi

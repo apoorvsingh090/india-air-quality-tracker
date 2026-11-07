@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>India Air Quality Tracker — CPCB AQI, live</title>
+    <meta
+      name="description"
+      content="Track CPCB air quality across 84 Indian cities, compare official bulletins, live stations and CAMS model data, and explore the measured impact of Diwali."
+    />
+    <meta name="theme-color" content="#07111f" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M32 12c8 9 14 16 14 24a14 14 0 1 1-28 0c0-8 6-15 14-24z' fill='%232dd4bf'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="orb orb-a" aria-hidden="true"></div>
+    <div class="orb orb-b" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="./">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="38" height="38">
+            <defs>
+              <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#2dd4bf" />
+                <stop offset="1" stop-color="#60a5fa" />
+              </linearGradient>
+            </defs>
+            <rect x="1.5" y="1.5" width="45" height="45" rx="12" fill="#0b1a2b" stroke="url(#lg)" stroke-width="1.4" />
+            <path d="M24 9c6.5 7.6 11 13.3 11 19.4A11 11 0 1 1 13 28.4C13 22.3 17.5 16.6 24 9z" fill="url(#lg)" opacity=".92" />
+            <circle cx="24" cy="30" r="4.2" fill="#07111f" />
+          </svg>
+        </span>
+        <span class="brand-text">
+          <strong>India Air Quality Tracker</strong>
+          <small>CPCB AQI · <span id="cityCount">84</span> cities · tier 1–3</small>
+        </span>
+      </a>
+      <div class="header-meta">
+        <span class="live-pill"><i class="dot"></i><span id="updatedAt">Loading data…</span></span>
+        <a class="gh-link" id="repoLink" href="https://github.com/apoorvsingh090/india-air-quality-tracker" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab is-active" data-tab="dashboard" role="tab" aria-selected="true">Live dashboard</button>
+      <button class="tab" data-tab="diwali" role="tab" aria-selected="false">Diwali impact</button>
+      <button class="tab" data-tab="method" role="tab" aria-selected="false">Sources &amp; method</button>
+    </nav>
+
+    <main>
+      <!-- DASHBOARD -->
+      <section class="tab-panel" id="panel-dashboard" role="tabpanel">
+        <div class="hero">
+          <div class="hero-copy">
+            <span class="eyebrow">National AQI monitor</span>
+            <h2>How clean is the air<br />in India right now?</h2>
+            <p>
+              Official CPCB city AQI, live monitoring stations and the CAMS model — merged into one view across
+              <strong>84 tier 1, 2 and 3 cities</strong>. Headline values use the CPCB National AQI (24-hour average).
+            </p>
+            <div class="hero-badges">
+              <span class="chip"><i class="chip-dot teal"></i>CPCB official bulletin</span>
+              <span class="chip"><i class="chip-dot blue"></i>Live CAAQMS stations</span>
+              <span class="chip"><i class="chip-dot violet"></i>CAMS / Copernicus</span>
+            </div>
+          </div>
+          <div class="national-grid" id="nationalGrid" aria-live="polite"></div>
+        </div>
+
+        <div class="scale-card" aria-label="CPCB AQI scale">
+          <div class="scale-head">
+            <span>CPCB AQI scale</span>
+            <span class="scale-note">0–500 · higher is worse</span>
+          </div>
+          <div class="scale-bar">
+            <div style="--c:#22c55e"><b>Good</b><span>0–50</span></div>
+            <div style="--c:#84cc16"><b>Satisfactory</b><span>51–100</span></div>
+            <div style="--c:#f59e0b"><b>Moderate</b><span>101–200</span></div>
+            <div style="--c:#f97316"><b>Poor</b><span>201–300</span></div>
+            <div style="--c:#ef4444"><b>Very Poor</b><span>301–400</span></div>
+            <div style="--c:#b91c1c"><b>Severe</b><span>401–500</span></div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <label class="search">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 2a8 8 0 1 0 4.9 14.32l5.39 5.39 1.41-1.41-5.39-5.39A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/></svg>
+            <input id="searchInput" type="search" placeholder="Search a city or state…" autocomplete="off" />
+          </label>
+          <div class="seg" id="tierFilter" role="group" aria-label="Filter by tier">
+            <button class="seg-btn is-active" data-tier="all">All</button>
+            <button class="seg-btn" data-tier="1">Tier 1</button>
+            <button class="seg-btn" data-tier="2">Tier 2</button>
+            <button class="seg-btn" data-tier="3">Tier 3</button>
+          </div>
+          <label class="select-wrap">
+            <span>Sort</span>
+            <select id="sortSelect">
+              <option value="aqi-desc">Most polluted</option>
+              <option value="aqi-asc">Cleanest</option>
+              <option value="change-desc">Biggest Diwali jump (2025)</option>
+              <option value="name-asc">City name</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="result-meta">
+          <span id="resultCount">—</span>
+          <span class="legend-inline" id="legendInline"></span>
+        </div>
+
+        <div class="city-grid" id="cityGrid"></div>
+        <p class="empty" id="emptyState" hidden>No city matches that search. Try a different name or tier.</p>
+      </section>
+
+      <!-- DIWALI -->
+      <section class="tab-panel" id="panel-diwali" role="tabpanel" hidden>
+        <div class="section-head">
+          <span class="eyebrow">Diwali impact study</span>
+          <h2>What firecracker night does to the air</h2>
+          <p>
+            Diwali 2025 fell on <strong>20 October</strong>. We compare each city's official CPCB AQI on the Diwali-night
+            bulletin (24-hour average) with its own average over the seven previous days. Diwali 2026 is on
+            <strong>8 November</strong>; its results will populate automatically after the 9 November bulletin.
+          </p>
+        </div>
+
+        <div id="diwaliHero" class="diwali-hero"></div>
+
+        <div class="diwali-grid">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Biggest AQI jumps · Diwali 2025</h3>
+              <span class="muted">% change vs. 7-day pre-Diwali baseline</span>
+            </div>
+            <div id="diwaliChart" class="chart-wrap"></div>
+          </div>
+          <div class="panel" id="diwali2026Panel">
+            <div class="panel-head">
+              <h3>Diwali 2026 · live status</h3>
+              <span class="muted" id="diwali2026Status">Pending</span>
+            </div>
+            <div id="diwali2026Body"></div>
+          </div>
+        </div>
+
+        <div class="panel table-panel">
+          <div class="panel-head">
+            <h3>City-by-city results</h3>
+            <span class="muted">Official CPCB bulletin values</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="diwaliTable">
+              <thead>
+                <tr>
+                  <th>City</th>
+                  <th>Tier</th>
+                  <th class="num">Pre-Diwali AQI</th>
+                  <th class="num">Diwali-night AQI</th>
+                  <th class="num">Change</th>
+                  <th>Category on Diwali</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="method-note" id="diwaliMethod"></div>
+      </section>
+
+      <!-- METHOD -->
+      <section class="tab-panel" id="panel-method" role="tabpanel" hidden>
+        <div class="section-head">
+          <span class="eyebrow">Transparency</span>
+          <h2>Sources, standards &amp; limitations</h2>
+          <p>
+            This tracker is open data, rebuilt every hour by a scheduled GitHub Action. It is an information tool,
+            not a substitute for official health advisories.
+          </p>
+        </div>
+        <div id="sourceCards" class="source-list"></div>
+        <div class="two-col">
+          <div class="panel prose">
+            <h3>How the AQI is calculated</h3>
+            <p>
+              We use the <strong>CPCB National Air Quality Index (2014)</strong>. For each pollutant a sub-index is
+              interpolated from the official breakpoints, and the city AQI is the maximum sub-index. The headline
+              value is the <strong>official CPCB daily bulletin</strong>: a 24-hour average ending 4 PM IST.
+            </p>
+            <ul>
+              <li>PM2.5, PM10, NO2, SO2, NH3: 24-hour averages</li>
+              <li>CO, O3: 8-hour averages</li>
+              <li>Categories: Good, Satisfactory, Moderate, Poor, Very Poor, Severe</li>
+            </ul>
+            <h3>What the three sources are</h3>
+            <p>
+              <strong>CPCB bulletin</strong> — the regulator's official city AQI, published once a day.
+              <strong>Live stations</strong> — CPCB/SPCB CAAQMS feeds aggregated by AQICN/WAQI, updated hourly (a
+              growing subset of cities).
+              <strong>CAMS</strong> — the Copernicus Atmosphere Monitoring Service model via Open-Meteo, which gives
+              hourly modelled concentrations for every city.
+            </p>
+            <h3>Limitations</h3>
+            <p>
+              AQI is a 24-hour city average and smooths short peaks, including firecracker bursts. Monitoring
+              coverage varies; model values are estimates, not measurements. Official values should always take
+              precedence for health decisions.
+            </p>
+          </div>
+          <div class="panel prose">
+            <h3>Diwali methodology</h3>
+            <p>
+              The Diwali-night value comes from the CPCB bulletin dated <strong>D+1</strong>, because its averaging
+              window runs from 4 PM on Diwali to 4 PM the next day — capturing the evening and overnight fireworks.
+              The baseline is the mean of the seven daily bulletins before Diwali, so each city is compared with
+              itself rather than with a national average.
+            </p>
+            <h3>Update cadence</h3>
+            <ul>
+              <li>CPCB bulletin: once daily, around 4–6 PM IST</li>
+              <li>Live stations + CAMS: hourly via GitHub Actions</li>
+              <li>Diwali study: recalculated every hour; finalised when D+1 bulletin appears</li>
+            </ul>
+            <h3>Health guidance</h3>
+            <p>
+              Above 100, sensitive groups should limit prolonged outdoor exertion. Above 200, everyone should reduce
+              outdoor activity; above 300, avoid it. Use an N95 mask outdoors and keep windows closed during severe
+              episodes.
+            </p>
+            <p class="muted small">
+              Built with public data. Code is MIT-licensed. Corrections and contributions are welcome on GitHub.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Data: CPCB · AQICN/WAQI · Copernicus CAMS via Open-Meteo</span>
+      <span id="footerUpdated"></span>
+      <span>Not an official government service.</span>
+    </footer>
+
+    <!-- CITY MODAL -->
+    <div class="modal" id="cityModal" hidden>
+      <div class="modal-backdrop" data-close="modal"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <button class="modal-close" data-close="modal" aria-label="Close">×</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+  </body>
+</html>
