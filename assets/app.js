@@ -351,7 +351,7 @@ function openCity(city) {
     <div class="modal-section">
       <h4>Source comparison</h4>
       <div class="source-grid">${sourceBoxes}</div>
-      <p class="modal-note">Headline uses the official CPCB 24-hour bulletin. Station and CAMS values are shown for cross-checking; standards and averaging windows differ.</p>
+      <p class="modal-note">Headline uses the official CPCB 24-hour bulletin. Station = WAQI/US EPA AQI; CAMS = modelled CPCB AQI. Standards and averaging windows differ.</p>
     </div>
 
     <div class="modal-section">
@@ -360,8 +360,9 @@ function openCity(city) {
     </div>
 
     <div class="modal-section">
-      <h4>Pollutant concentrations · 24h average</h4>
+      <h4>Pollutant concentrations · 24h average (CAMS)</h4>
       <div class="poll-bars">${pollBars || '<p class="muted">No pollutant detail available.</p>'}</div>
+      <p class="modal-note">Bars show modelled concentrations; colour reflects each pollutant's CPCB sub-index category.</p>
     </div>
 
     <div class="modal-section">
