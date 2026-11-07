@@ -29,10 +29,13 @@ jobs:
         run: npm ci
 
       - name: Fetch source data
-        run: node scripts/fetch-data.mjs --discover
+        run: node scripts/fetch-data.mjs
 
       - name: Rebuild Diwali study
         run: node scripts/diwali.mjs
+
+      - name: Audit data integrity
+        run: node scripts/audit.mjs
 
       - name: Commit updated data
         run: |

@@ -106,7 +106,15 @@ function camsCity(d) {
   const aqi24 = computeAqi(avg24);
   const aqiNow = computeAqi(last8);
   const hourlyAqi = cutSeries.pm25.map((v, idx) => {
-    const c = { pm25: v, co: cutSeries.co[idx], o3: cutSeries.o3[idx] };
+    const c = {
+      pm25: v,
+      pm10: cutSeries.pm10[idx],
+      no2: cutSeries.no2[idx],
+      so2: cutSeries.so2[idx],
+      co: cutSeries.co[idx],
+      o3: cutSeries.o3[idx],
+      nh3: cutSeries.nh3[idx]
+    };
     return computeAqi(c).aqi;
   });
   return {
@@ -140,6 +148,7 @@ async function loadLatestBulletin() {
   for (const d of dates) {
     try {
       const b = await fetchBulletin(d);
+      if (b.count < 50) throw new Error(`only ${b.count} cities parsed`);
       const map = new Map();
       for (const row of b.cities) map.set(row.normalized, row);
       console.log(`CPCB bulletin: ${d} (${b.count} cities)`);
@@ -165,7 +174,7 @@ async function main() {
       name: "CPCB CAAQMS stations via AQICN/WAQI",
       status: "ok",
       url: "https://aqicn.org/india/",
-      note: "Ground-station data reported by CPCB and state pollution control boards, aggregated by the World Air Quality Index project."
+      note: "Ground-station data reported by CPCB and state pollution control boards, aggregated by the World Air Quality Index project. WAQI reports its own AQI (US EPA method); stale feeds are excluded from the live count."
     }
   };
 
@@ -207,11 +216,14 @@ async function main() {
       try {
         const raw = await fetchWaqiStation(meta.idx);
         const parsed = parseWaqi(raw);
+        const ageHours = parsed.updatedAt ? (Date.now() - Date.parse(parsed.updatedAt)) / 3600000 : null;
         stations.set(city.id, {
           idx: meta.idx,
           name: parsed.name || meta.name,
           aqi: parsed.reportedAqi,
-          updatedAt: parsed.updatedAt
+          updatedAt: parsed.updatedAt,
+          ageHours: ageHours == null ? null : round(ageHours, 1),
+          stale: ageHours == null || ageHours > 6
         });
       } catch (e) {
         console.error(`WAQI ${city.id}: ${e.message}`);
@@ -238,8 +250,9 @@ async function main() {
     const m = cams.get(city.id) || null;
     const s = stations.get(city.id) || null;
     const b = bulletin?.map.get(city.id) || null;
-    const primary = b?.aqi != null ? b : m?.aqi != null ? m : s;
-    const primarySource = b?.aqi != null ? "cpcb-bulletin" : m?.aqi != null ? "cams" : s?.aqi != null ? "cpcb" : null;
+    const freshStation = s && !s.stale ? s : null;
+    const primary = b?.aqi != null ? b : m?.aqi != null ? m : freshStation;
+    const primarySource = b?.aqi != null ? "cpcb-bulletin" : m?.aqi != null ? "cams" : freshStation ? "cpcb" : null;
     return {
       ...city,
       waqi: waqiIndex[city.id] || null,
@@ -270,13 +283,20 @@ async function main() {
             idx: s.idx,
             name: s.name,
             aqi: s.aqi,
-            updatedAt: s.updatedAt
+            updatedAt: s.updatedAt,
+            ageHours: s.ageHours,
+            stale: s.stale
           }
         : null
     };
   });
 
   const ranked = cities.filter((c) => c.aqi != null).sort((a, b) => b.aqi - a.aqi);
+  const freshStations = cities.filter((c) => c.station && !c.station.stale).length;
+  sources.cpcb.status = freshStations > 0 ? "ok" : "stale";
+  sources.cpcb.note += ` Current mapped stations: ${freshStations} of ${stations.size} (≤6h old).`;
+  sources.cams.status = cams.size === CITIES.length ? "ok" : cams.size > 0 ? "partial" : "unavailable";
+  sources.cams.note = `Modeled surface concentrations, hourly. ${cams.size} of ${CITIES.length} cities returned a series. Used for cities without a current official bulletin row.`;
   const latest = {
     generatedAt: now.toISOString(),
     generatedAtIST: now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: false }),
@@ -288,7 +308,8 @@ async function main() {
       best: ranked.length
         ? { id: ranked.at(-1).id, name: ranked.at(-1).name, aqi: ranked.at(-1).aqi }
         : null,
-      stationCount: stations.size
+      stationCount: freshStations,
+      stationMappedCount: stations.size
     },
     cities
   };

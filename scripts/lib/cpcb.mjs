@@ -7,6 +7,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const CACHE = path.join(ROOT, "data", "cache", "bulletins");
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) india-aqi-tracker/1.0";
+const PARSER_VERSION = 2;
 
 const CATEGORY_RE = "Good|Satisfactory|Moderate|Poor|Very Poor|Severe";
 
@@ -40,14 +41,10 @@ export function normalizeCity(name) {
 
 function pollutantFrom(chunk) {
   const s = chunk.replace(/\s+/g, " ");
-  if (/PM\s*2\.5/.test(s)) return "PM2.5";
-  if (/PM\s*10/.test(s)) return "PM10";
-  if (/NO\s*2/.test(s)) return "NO2";
-  if (/SO\s*2/.test(s)) return "SO2";
-  if (/NH\s*3/.test(s)) return "NH3";
-  if (/O\s*3/.test(s)) return "O3";
-  if (/CO/.test(s)) return "CO";
-  return null;
+  const m = s.match(/PM\s*2\.5|PM\s*10|NO\s*2|SO\s*2|NH\s*3|O\s*3|CO/);
+  if (!m) return null;
+  const token = m[0].replace(/\s+/g, "");
+  return { "PM2.5": "PM2.5", PM10: "PM10", NO2: "NO2", SO2: "SO2", NH3: "NH3", O3: "O3", CO: "CO" }[token] || null;
 }
 
 function parseText(text) {
@@ -75,9 +72,10 @@ export async function fetchBulletin(dateStr, { useCache = true } = {}) {
   const cacheFile = path.join(CACHE, `${dateStr}.json`);
   if (useCache) {
     try {
-      return JSON.parse(await fs.readFile(cacheFile, "utf8"));
+      const cached = JSON.parse(await fs.readFile(cacheFile, "utf8"));
+      if (cached.parserVersion === PARSER_VERSION && cached.count >= 50 && cached.cities?.length === cached.count) return cached;
     } catch {
-      // not cached
+      // not cached, or cache is incomplete: refetch
     }
   }
   const compact = dateStr.replace(/-/g, "");
@@ -98,6 +96,7 @@ export async function fetchBulletin(dateStr, { useCache = true } = {}) {
     unique.push(row);
   }
   const out = {
+    parserVersion: PARSER_VERSION,
     date: dateStr,
     aqiOn: header ? header[1] : dateStr,
     aqiAt: header ? header[2].trim() : null,

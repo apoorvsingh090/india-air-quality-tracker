@@ -182,11 +182,13 @@ function lineChart(values, labels) {
 function renderNational() {
   const n = state.latest.national;
   const cat = categoryOf(n.avgAqi);
+  const official = state.latest.cities.filter((c) => c.primarySource === "cpcb-bulletin").length;
+  const modelled = state.latest.cities.filter((c) => c.primarySource === "cams").length;
   const cards = [
     {
       label: "National average AQI",
       value: `${fmt(n.avgAqi)} <small>${cat.name}</small>`,
-      sub: "Mean of city headlines",
+      sub: `${official} official bulletin · ${modelled} modelled`,
       glow: `rgba(45,212,191,.18)`
     },
     {
@@ -204,7 +206,7 @@ function renderNational() {
     {
       label: "Cities tracked",
       value: `${fmt(state.latest.cities.length)}`,
-      sub: `${n.stationCount} live stations · bulletin ${state.latest.cities.find((c) => c.bulletin)?.bulletin.date || "—"}`,
+      sub: `${n.stationCount} current station${n.stationCount === 1 ? "" : "s"} · bulletin ${dateIST(state.latest.cities.find((c) => c.bulletin)?.bulletin.date)}`,
       glow: `rgba(96,165,250,.18)`
     }
   ];
@@ -257,7 +259,7 @@ function renderCities() {
     const change = cityChange(city);
     const srcs = [];
     if (city.bulletin) srcs.push(`<span class="src cpcb" title="Official CPCB daily bulletin">CPCB</span>`);
-    if (city.station) srcs.push(`<span class="src station" title="${safe(city.station.name || "Live station")}">STATION</span>`);
+    if (city.station && !city.station.stale) srcs.push(`<span class="src station" title="${safe(city.station.name || "Live station")}">STATION</span>`);
     if (city.model) srcs.push(`<span class="src cams" title="CAMS model">CAMS</span>`);
 
     const card = el("button", "city-card");
@@ -321,9 +323,11 @@ function openCity(city) {
       m: bulletin ? `${bulletin.category} · ${bulletin.pollutant || "n/a"} · ${bulletin.date}` : "not available"
     },
     {
-      k: "Live station",
+      k: station?.stale ? "Station (stale)" : "Station reading",
       v: station?.aqi != null ? fmt(station.aqi) : "—",
-      m: station ? `${station.name || "CAAQMS"} · ${timeIST(station.updatedAt, true) || "n/a"}` : "not in live feed"
+      m: station
+        ? `${station.name || "CAAQMS"} · ${timeIST(station.updatedAt, true) || "n/a"}${station.stale ? " · not current" : ""}`
+        : "not in live feed"
     },
     {
       k: "CAMS model",
@@ -351,7 +355,7 @@ function openCity(city) {
     </div>
 
     <div class="modal-section">
-      <h4>Hourly AQI · last 72 hours (CAMS)</h4>
+      <h4>Hourly AQI · last ${series.aqi?.length || 0} hours (CAMS)</h4>
       ${lineChart(series.aqi || [], state.history?.hours || [])}
     </div>
 
@@ -439,13 +443,21 @@ function renderDiwali() {
         <div><span>Biggest jump</span><b>${safe(jump?.name || "—")} · +${fmt(jump?.changePct, 1)}%</b></div>
       </div>`;
   } else {
+    const istToday = new Date(Date.now() + 19800000).toISOString().slice(0, 10);
+    const dayDiff = Math.round((new Date(`${y26.date}T00:00:00Z`) - new Date(`${istToday}T00:00:00Z`)) / 86400000);
+    const pendingTitle =
+      dayDiff > 1 ? `Diwali is in ${dayDiff} days` : dayDiff === 1 ? "Diwali is tomorrow" : dayDiff === 0 ? "Diwali is tonight" : "Diwali was last night";
+    const pendingCopy =
+      dayDiff > 0
+        ? "The CPCB bulletin covering Diwali night is published on 9 Nov 2026, evening. This panel fills in automatically — no action needed."
+        : "The CPCB bulletin covering Diwali night is due on 9 Nov 2026, evening. This panel fills in automatically — no action needed.";
     body.innerHTML = `
       <div class="pending-card">
         <div class="ring">◔</div>
-        <h4>Diwali is tomorrow</h4>
-        <p>The CPCB bulletin covering Diwali night is published on <strong>9 Nov 2026, evening</strong>. This panel fills in automatically — no action needed.</p>
+        <h4>${pendingTitle}</h4>
+        <p>${pendingCopy}</p>
         <div class="pending-list">
-          <div><span>2026 pre-Diwali baseline</span><b>${fmt(y26.summary.avgBaselineAqi)} AQI</b></div>
+          <div><span>2026 pre-Diwali baseline</span><b>${fmt(y26.summary.avgBaselineAvailable ?? y26.summary.avgBaselineAqi)} AQI</b></div>
           <div><span>Cities tracked</span><b>${y26.cities.filter((c) => c.baselineAqi != null).length}</b></div>
           <div><span>Live national AQI now</span><b>${fmt(state.latest?.national?.avgAqi)}</b></div>
           <div><span>Diwali 2025 average jump</span><b>+${fmt(s25.avgChangePct, 1)}%</b></div>
@@ -470,7 +482,8 @@ function renderDiwali() {
     </tr>`;
   }).join("");
 
-  $("#diwaliMethod").innerHTML = `<b>How this is measured.</b> ${safe(d.method.impact)} Baseline: ${safe(d.method.baseline)} ${safe(d.method.caveat)} Source: ${safe(d.method.source)}`;
+  const coverage = ` ${y25.summary.citiesCompared} of ${y25.cities.length} cities had an official Diwali-night value.`;
+  $("#diwaliMethod").innerHTML = `<b>How this is measured.</b> ${safe(d.method.impact)} Baseline: ${safe(d.method.baseline)} ${safe(d.method.caveat)}${safe(coverage)} Source: ${safe(d.method.source)}`;
 }
 
 /* ---------- sources ---------- */

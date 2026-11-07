@@ -11,7 +11,8 @@
   "scripts": {
     "data": "node scripts/fetch-data.mjs",
     "diwali": "node scripts/diwali.mjs",
-    "update": "node scripts/fetch-data.mjs && node scripts/diwali.mjs",
+    "audit": "node scripts/audit.mjs",
+    "update": "node scripts/fetch-data.mjs && node scripts/diwali.mjs && node scripts/audit.mjs",
     "serve": "npx --yes serve . -l 4173"
   },
   "keywords": [

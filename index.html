@@ -6,7 +6,7 @@
     <title>India Air Quality Tracker — CPCB AQI, live</title>
     <meta
       name="description"
-      content="Track CPCB air quality across 84 Indian cities, compare official bulletins, live stations and CAMS model data, and explore the measured impact of Diwali."
+      content="Track CPCB air quality across 84 Indian cities, compare official bulletins, station cross-checks and CAMS model data, and explore the measured impact of Diwali."
     />
     <meta name="theme-color" content="#07111f" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Cpath d='M32 12c8 9 14 16 14 24a14 14 0 1 1-28 0c0-8 6-15 14-24z' fill='%232dd4bf'/%3E%3C/svg%3E" />
@@ -59,12 +59,12 @@
             <span class="eyebrow">National AQI monitor</span>
             <h2>How clean is the air<br />in India right now?</h2>
             <p>
-              Official CPCB city AQI, live monitoring stations and the CAMS model — merged into one view across
+              Official CPCB city AQI, station cross-checks and the CAMS model — merged into one view across
               <strong>84 tier 1, 2 and 3 cities</strong>. Headline values use the CPCB National AQI (24-hour average).
             </p>
             <div class="hero-badges">
               <span class="chip"><i class="chip-dot teal"></i>CPCB official bulletin</span>
-              <span class="chip"><i class="chip-dot blue"></i>Live CAAQMS stations</span>
+              <span class="chip"><i class="chip-dot blue"></i>CPCB station cross-check</span>
               <span class="chip"><i class="chip-dot violet"></i>CAMS / Copernicus</span>
             </div>
           </div>
@@ -200,8 +200,7 @@
             <h3>What the three sources are</h3>
             <p>
               <strong>CPCB bulletin</strong> — the regulator's official city AQI, published once a day.
-              <strong>Live stations</strong> — CPCB/SPCB CAAQMS feeds aggregated by AQICN/WAQI, updated hourly (a
-              growing subset of cities).
+              <strong>Station cross-checks</strong> — CPCB/SPCB CAAQMS feeds aggregated by AQICN/WAQI, used only when the feed is current (≤6 hours old).
               <strong>CAMS</strong> — the Copernicus Atmosphere Monitoring Service model via Open-Meteo, which gives
               hourly modelled concentrations for every city.
             </p>
@@ -223,7 +222,7 @@
             <h3>Update cadence</h3>
             <ul>
               <li>CPCB bulletin: once daily, around 4–6 PM IST</li>
-              <li>Live stations + CAMS: hourly via GitHub Actions</li>
+              <li>Station cross-checks + CAMS: hourly via GitHub Actions</li>
               <li>Diwali study: recalculated every hour; finalised when D+1 bulletin appears</li>
             </ul>
             <h3>Health guidance</h3>
