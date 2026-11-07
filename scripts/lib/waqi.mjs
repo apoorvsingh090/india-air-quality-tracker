@@ -29,7 +29,7 @@ async function get(url, { timeout = 25000, retries = 2 } = {}) {
 export async function discoverWaqiIdx(slugs) {
   for (const slug of slugs || []) {
     try {
-      const html = await get(`https://aqicn.org/city/${slug}/`, { retries: 1 });
+      const html = await get(`https://aqicn.org/city/${slug}/`, { timeout: 7000, retries: 0 });
       const m = html.match(/aqiStation\s*=\s*\{[^}]*?"idx"\s*:\s*(\d+)/);
       if (m) {
         const name = html.match(/aqiStation\s*=\s*\{[^}]*?"name"\s*:\s*"([^"]+)"/);
@@ -38,7 +38,7 @@ export async function discoverWaqiIdx(slugs) {
     } catch {
       // try next slug variant
     }
-    await sleep(900);
+    await sleep(400);
   }
   return null;
 }

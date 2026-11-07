@@ -183,7 +183,7 @@ async function main() {
   // Discover missing AQICN station ids (slow, bounded per run).
   let discovered = 0;
   let attempts = 0;
-  const MAX_ATTEMPTS = Number(process.env.MAX_ATTEMPTS || (DISCOVER ? 999 : 10));
+  const MAX_ATTEMPTS = Number(process.env.MAX_ATTEMPTS || (DISCOVER ? 999 : 5));
   for (const city of CITIES) {
     if (waqiIndex[city.id] || discovered >= MAX_DISCOVER || attempts >= MAX_ATTEMPTS) continue;
     attempts++;
