@@ -74,8 +74,11 @@ function fmt(n, digits = 0) {
 
 function timeIST(iso, withDate = false) {
   if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso.replace("T", " ").replace("+05:30", " IST");
+  const raw = String(iso);
+  const hasZone = /[zZ]$|[+-]\d{2}:\d{2}$/.test(raw);
+  const normalized = hasZone ? raw : raw.length === 16 ? `${raw}:00+05:30` : `${raw}+05:30`;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return raw.replace("T", " ").replace("+05:30", " IST");
   return d.toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
     hour: "2-digit",
