@@ -7,7 +7,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const CACHE = path.join(ROOT, "data", "cache", "bulletins");
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) india-aqi-tracker/1.0";
-const PARSER_VERSION = 2;
+const PARSER_VERSION = 3;
 
 const CATEGORY_RE = "Good|Satisfactory|Moderate|Poor|Very Poor|Severe";
 
@@ -25,18 +25,27 @@ const ALIASES = {
   vizag: "visakhapatnam",
   calicut: "kozhikode",
   trichy: "tiruchirappalli",
-  tiruchirapalli: "tiruchirappalli",
-  "greater noida": "noida",
-  "navi mumbai": "mumbai"
+  tiruchirapalli: "tiruchirappalli"
+};
+
+// Names that need their qualifier kept (or resolved) so distinct cities never collide.
+const QUALIFIED_ALIASES = {
+  "aurangabad (maharashtra)": "aurangabad",
+  "aurangabad (bihar)": "aurangabad-bihar",
+  "greater noida": "greater-noida",
+  "navi mumbai": "navi-mumbai"
 };
 
 export function normalizeCity(name) {
-  let n = name
-    .replace(/\([^)]*\)/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-  return ALIASES[n] || n;
+  const lower = name.replace(/\s+/g, " ").trim().toLowerCase();
+  if (QUALIFIED_ALIASES[lower]) return QUALIFIED_ALIASES[lower];
+  const paren = lower.match(/\(([^)]+)\)/);
+  if (paren) {
+    const base = lower.replace(/\([^)]*\)/g, "").trim();
+    const qualifier = paren[1].trim().replace(/\s+/g, "-");
+    return `${base}-${qualifier}`;
+  }
+  return ALIASES[lower] || lower;
 }
 
 function pollutantFrom(chunk) {

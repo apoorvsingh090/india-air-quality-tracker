@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CITIES } from "./lib/cities.mjs";
 import { categoryOf, subIndex, CATEGORIES } from "./lib/aqi.mjs";
+import { normalizeCity } from "./lib/cpcb.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "data");
@@ -61,6 +62,13 @@ ok(categoryOf(51).name === "Satisfactory", "Category boundary 51 = Satisfactory"
 ok(categoryOf(300).name === "Poor", "Category boundary 300 = Poor");
 ok(categoryOf(401).name === "Severe", "Category boundary 401 = Severe");
 ok(CATEGORIES.length === 6, "Six CPCB categories defined");
+
+// Ambiguous city names must not collide across states.
+ok(normalizeCity("Aurangabad (Bihar)") === "aurangabad-bihar", "Aurangabad (Bihar) normalized distinctly");
+ok(normalizeCity("Aurangabad (Maharashtra)") === "aurangabad", "Aurangabad (Maharashtra) normalized to city id");
+ok(normalizeCity("Greater Noida") === "greater-noida", "Greater Noida not merged into Noida");
+ok(normalizeCity("Navi Mumbai") === "navi-mumbai", "Navi Mumbai not merged into Mumbai");
+ok(normalizeCity("Bangalore") === "bengaluru", "Bangalore alias normalized");
 
 /* ------------------------------------------------------------------ */
 /* 2. Static city config + generated metadata                          */
