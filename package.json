@@ -12,8 +12,12 @@
     "data": "node scripts/fetch-data.mjs",
     "diwali": "node scripts/diwali.mjs",
     "audit": "node scripts/audit.mjs",
+    "test": "node --test",
     "update": "node scripts/fetch-data.mjs && node scripts/diwali.mjs && node scripts/audit.mjs",
-    "serve": "npx --yes serve . -l 4173"
+    "serve": "npx --yes serve@14 . -l 4173"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "keywords": [
     "air-quality",

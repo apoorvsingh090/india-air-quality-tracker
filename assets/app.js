@@ -511,7 +511,9 @@ function renderSources() {
 /* ---------- boot ---------- */
 
 async function loadJson(path) {
-  const res = await fetch(`${path}?v=${Date.now()}`, { cache: "no-store" });
+  // Cache freely: Pages serves ETags and the data changes hourly, so the
+  // browser revalidates correctly instead of bypassing cache on every view.
+  const res = await fetch(path);
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return res.json();
 }

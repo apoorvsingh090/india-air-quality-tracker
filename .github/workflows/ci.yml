@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Syntax check
+        run: |
+          node --check scripts/fetch-data.mjs
+          node --check scripts/diwali.mjs
+          node --check scripts/audit.mjs
+          node --check assets/app.js
+      - name: Tests
+        run: npm test
