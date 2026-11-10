@@ -45,8 +45,7 @@ const state = {
   diwali: null,
   search: "",
   tier: "all",
-  sort: "aqi-desc",
-  changeMap: new Map()
+  sort: "aqi-desc"
 };
 
 function categoryOf(aqi) {
@@ -375,7 +374,7 @@ function openCity(city) {
   `;
   $("#cityModal").hidden = false;
   document.body.style.overflow = "hidden";
-  $(".modal-close").focus();
+  $(".modal-close")?.focus();
 }
 
 function closeModal() {
@@ -536,9 +535,6 @@ async function init() {
     state.latest = latest;
     state.history = history;
     state.diwali = diwali;
-    if (diwali?.y2025?.cities) {
-      for (const c of diwali.y2025.cities) if (c.changePct != null) state.changeMap.set(c.id, c.changePct);
-    }
     setUpdated();
     renderNational();
     renderCities();

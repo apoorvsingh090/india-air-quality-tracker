@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CITIES } from "./lib/cities.mjs";
 import { fetchBulletin } from "./lib/cpcb.mjs";
+import { atomicWriteJson } from "./lib/fsx.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "data");
@@ -34,8 +35,9 @@ async function loadBulletins(dates) {
   for (const d of dates) {
     try {
       map.set(d, await fetchBulletin(d));
-    } catch {
-      // bulletins can lag by a day; missing dates are simply skipped
+    } catch (e) {
+      // bulletins can lag by a day; missing dates are simply skipped, but not silently
+      console.error(`Diwali bulletin ${d} unavailable: ${e?.message ?? e}`);
     }
   }
   return map;
@@ -129,7 +131,7 @@ async function main() {
   };
 
   await fs.mkdir(DATA, { recursive: true });
-  await fs.writeFile(path.join(DATA, "diwali.json"), JSON.stringify(out));
+  await atomicWriteJson(path.join(DATA, "diwali.json"), out);
   console.log(`Wrote diwali.json — 2025 avg change ${out.y2025.summary.avgChangePct}% across ${out.y2025.summary.citiesCompared} cities; 2026 status ${status2026}.`);
 }
 

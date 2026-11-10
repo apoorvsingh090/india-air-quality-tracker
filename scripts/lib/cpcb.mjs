@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pdf from "pdf-parse/lib/pdf-parse.js";
+import { atomicWriteJson } from "./fsx.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const CACHE = path.join(ROOT, "data", "cache", "bulletins");
@@ -92,6 +93,7 @@ export async function fetchBulletin(dateStr, { useCache = true } = {}) {
   const res = await fetch(url, { headers: { "user-agent": UA } });
   if (!res.ok) throw new Error(`bulletin ${dateStr}: HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > 20 * 1024 * 1024) throw new Error(`bulletin PDF too large (${buf.length} bytes)`);
   const parsed = await pdf(buf);
   const text = parsed.text;
   const header = text.match(/Air Quality Index on\s+([A-Za-z]{3}\s+\d{1,2},\s+\d{4})\s*@\s*([0-9: APM]+)/i);
@@ -114,16 +116,6 @@ export async function fetchBulletin(dateStr, { useCache = true } = {}) {
     cities: unique
   };
   await fs.mkdir(CACHE, { recursive: true });
-  await fs.writeFile(cacheFile, JSON.stringify(out));
-  return out;
-}
-
-export async function bulletinDates(startDate, endDate) {
-  const out = [];
-  const start = new Date(`${startDate}T00:00:00Z`);
-  const end = new Date(`${endDate}T00:00:00Z`);
-  for (let d = start; d <= end; d = new Date(d.getTime() + 86400000)) {
-    out.push(d.toISOString().slice(0, 10));
-  }
+  await atomicWriteJson(cacheFile, out);
   return out;
 }

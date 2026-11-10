@@ -5,6 +5,7 @@ import { CITIES } from "./lib/cities.mjs";
 import { computeAqi, POLLUTANTS, ugm3ToMgm3 } from "./lib/aqi.mjs";
 import { discoverWaqiIdx, fetchWaqiStation, parseWaqi, sleep } from "./lib/waqi.mjs";
 import { fetchBulletin } from "./lib/cpcb.mjs";
+import { atomicWriteJson } from "./lib/fsx.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "data");
@@ -27,16 +28,20 @@ const mean = (arr) => {
 };
 const round = (v, d = 1) => (v == null || Number.isNaN(v) ? null : Math.round(v * 10 ** d) / 10 ** d);
 
-async function fetchJson(url, tries = 3) {
+async function fetchJson(url, tries = 3, timeout = 25000) {
   let last;
   for (let i = 0; i < tries; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
     try {
-      const res = await fetch(url, { headers: { "user-agent": "india-aqi-tracker/1.0" } });
+      const res = await fetch(url, { headers: { "user-agent": "india-aqi-tracker/1.0" }, signal: ctrl.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (e) {
       last = e;
       await sleep(1200 * (i + 1));
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw last;
@@ -98,13 +103,13 @@ function camsCity(d) {
   cutSeries.co = cutSeries.co.map((v) => ugm3ToMgm3(v));
 
   const avg24 = {};
-  const last8 = {};
+  const latestConc = {};
   for (const p of POLLUTANTS) {
     avg24[p] = p === "co" || p === "o3" ? mean(cutSeries[p].slice(-8)) : mean(cutSeries[p].slice(-24));
-    last8[p] = cutSeries[p][cutSeries[p].length - 1] ?? null;
+    latestConc[p] = cutSeries[p][cutSeries[p].length - 1] ?? null;
   }
   const aqi24 = computeAqi(avg24);
-  const aqiNow = computeAqi(last8);
+  const aqiNow = computeAqi(latestConc);
   const hourlyAqi = cutSeries.pm25.map((v, idx) => {
     const c = {
       pm25: v,
@@ -121,7 +126,7 @@ function camsCity(d) {
     times: t,
     series: cutSeries,
     pollutants: Object.fromEntries(POLLUTANTS.map((p) => [p, round(avg24[p], 2)])),
-    now: Object.fromEntries(POLLUTANTS.map((p) => [p, round(last8[p], 2)])),
+    now: Object.fromEntries(POLLUTANTS.map((p) => [p, round(latestConc[p], 2)])),
     aqi: aqi24.aqi,
     dominant: aqi24.dominant,
     aqiNow: aqiNow.aqi,
@@ -153,10 +158,12 @@ async function loadLatestBulletin() {
       for (const row of b.cities) map.set(row.normalized, row);
       console.log(`CPCB bulletin: ${d} (${b.count} cities)`);
       return { date: d, aqiOn: b.aqiOn, aqiAt: b.aqiAt, map };
-    } catch {
-      // try the previous day
+    } catch (e) {
+      // try the previous day, but never silently
+      console.error(`CPCB bulletin ${d} failed: ${e?.message ?? e}`);
     }
   }
+  console.error("CPCB bulletin: no recent bulletin available after 4 days; headline falls back to CAMS");
   return null;
 }
 
@@ -203,7 +210,7 @@ async function main() {
       console.log(`WAQI idx ${city.id} -> ${found.idx} (${found.name})`);
     }
   }
-  await fs.writeFile(path.join(DATA, "waqi-index.json"), JSON.stringify(waqiIndex, null, 2));
+  await atomicWriteJson(path.join(DATA, "waqi-index.json"), waqiIndex, 2);
 
   console.log("WAQI: fetching station feeds...");
   const stations = new Map();
@@ -313,7 +320,7 @@ async function main() {
     },
     cities
   };
-  await fs.writeFile(path.join(DATA, "latest.json"), JSON.stringify(latest));
+  await atomicWriteJson(path.join(DATA, "latest.json"), latest);
 
   // Trend history: CAMS hourly AQI + PM2.5 for every city (72h).
   const hours = cams.values().next().value?.times || [];
@@ -324,8 +331,8 @@ async function main() {
       model: m ? { pm25: m.series.pm25, aqi: m.hourlyAqi } : null
     };
   }
-  await fs.writeFile(path.join(DATA, "history.json"), JSON.stringify(history));
-  await fs.writeFile(path.join(DATA, "cities.json"), JSON.stringify(CITIES.map(({ slugs, ...c }) => c), null, 2));
+  await atomicWriteJson(path.join(DATA, "history.json"), history);
+  await atomicWriteJson(path.join(DATA, "cities.json"), CITIES.map(({ slugs, ...c }) => c), 2);
 
   console.log(`Wrote latest.json (${ranked.length} ranked cities) and history.json`);
   console.log(`National average AQI: ${latest.national.avgAqi}`);
