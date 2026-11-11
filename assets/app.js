@@ -293,6 +293,8 @@ function renderCities() {
 
 /* ---------- modal ---------- */
 
+let lastFocused = null;
+
 function openCity(city) {
   const cat = categoryOf(city.aqi);
   const model = city.model;
@@ -372,14 +374,41 @@ function openCity(city) {
       ${change != null && !d ? "" : ""}
     </div>
   `;
+  lastFocused = document.activeElement;
   $("#cityModal").hidden = false;
   document.body.style.overflow = "hidden";
+  setBackgroundInert(true);
   $(".modal-close")?.focus();
 }
 
 function closeModal() {
   $("#cityModal").hidden = true;
   document.body.style.overflow = "";
+  setBackgroundInert(false);
+  if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
+  lastFocused = null;
+}
+
+function setBackgroundInert(on) {
+  for (const node of $$("body > header, body > nav, body > main, body > footer")) node.inert = on;
+}
+
+function trapModalFocus(e) {
+  if (e.key !== "Tab") return;
+  const modal = $("#cityModal");
+  const focusable = $$("a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex='-1'])", modal).filter(
+    (n) => n.offsetParent !== null
+  );
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && (document.activeElement === first || document.activeElement === modal)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 /* ---------- diwali ---------- */
@@ -477,7 +506,7 @@ function renderDiwali() {
       <td>T${c.tier}</td>
       <td class="num">${fmt(c.baselineAqi)}</td>
       <td class="num">${fmt(c.diwaliAqi)}</td>
-      <td class="num ${cls}">${c.changePct > 0 ? "+" : ""}${fmt(c.changePct, 1)}%</td>
+      <td class="num ${cls}">${c.changePct == null ? "—" : `${c.changePct > 0 ? "+" : ""}${fmt(c.changePct, 1)}%`}</td>
       <td><span class="pill" style="--pc:${cat.color}">${safe(c.category || categoryOf(c.diwaliAqi).name)}</span></td>
     </tr>`;
   }).join("");
@@ -549,16 +578,31 @@ async function init() {
 
 /* ---------- events ---------- */
 
-$$(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    $$(".tab").forEach((b) => {
-      b.classList.toggle("is-active", b === btn);
-      b.setAttribute("aria-selected", String(b === btn));
-    });
-    $$(".tab-panel").forEach((p) => {
-      p.hidden = p.id !== `panel-${btn.dataset.tab}`;
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+const tabs = $$(".tab");
+
+function selectTab(btn, { scroll = false } = {}) {
+  for (const b of tabs) {
+    const active = b === btn;
+    b.classList.toggle("is-active", active);
+    b.setAttribute("aria-selected", String(active));
+    b.tabIndex = active ? 0 : -1;
+  }
+  for (const p of $$(".tab-panel")) p.hidden = p.id !== `panel-${btn.dataset.tab}`;
+  if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+tabs.forEach((btn, i) => {
+  btn.addEventListener("click", () => selectTab(btn, { scroll: true }));
+  btn.addEventListener("keydown", (e) => {
+    let next = null;
+    if (e.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
+    else if (e.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
+    else if (e.key === "Home") next = tabs[0];
+    else if (e.key === "End") next = tabs[tabs.length - 1];
+    if (!next) return;
+    e.preventDefault();
+    selectTab(next);
+    next.focus();
   });
 });
 
@@ -583,6 +627,7 @@ $("#sortSelect")?.addEventListener("change", (e) => {
 $("#cityModal")?.addEventListener("click", (e) => {
   if (e.target.closest("[data-close='modal']")) closeModal();
 });
+$("#cityModal")?.addEventListener("keydown", trapModalFocus);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$("#cityModal").hidden) closeModal();
 });
