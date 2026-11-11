@@ -50,19 +50,22 @@
       </div>
     </header>
 
-    <nav class="tabs" role="tablist" aria-label="Views">
-      <button class="tab is-active" data-tab="dashboard" role="tab" aria-selected="true">Live dashboard</button>
-      <button class="tab" data-tab="diwali" role="tab" aria-selected="false">Diwali impact</button>
-      <button class="tab" data-tab="method" role="tab" aria-selected="false">Sources &amp; method</button>
+    <nav class="tabs">
+      <div class="tablist" role="tablist" aria-label="Views">
+        <button class="tab is-active" id="tab-dashboard" data-tab="dashboard" role="tab" aria-selected="true" aria-controls="panel-dashboard" tabindex="0">Live dashboard</button>
+        <button class="tab" id="tab-diwali" data-tab="diwali" role="tab" aria-selected="false" aria-controls="panel-diwali" tabindex="-1">Diwali impact</button>
+        <button class="tab" id="tab-method" data-tab="method" role="tab" aria-selected="false" aria-controls="panel-method" tabindex="-1">Sources &amp; method</button>
+      </div>
     </nav>
 
     <main>
+      <h1 class="sr-only">India Air Quality Tracker — live CPCB air quality across 84 Indian cities</h1>
       <!-- DASHBOARD -->
-      <section class="tab-panel" id="panel-dashboard" role="tabpanel">
+      <section class="tab-panel" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
         <div class="hero">
           <div class="hero-copy">
             <span class="eyebrow">National AQI monitor</span>
-            <h2>How clean is the air<br />in India right now?</h2>
+            <h2>How clean is the air<br /> in India right now?</h2>
             <p>
               Official CPCB city AQI, station cross-checks and the CAMS model — merged into one view across
               <strong>84 tier 1, 2 and 3 cities</strong>. Headline values use the CPCB National AQI (24-hour average).
@@ -94,6 +97,7 @@
         <div class="controls">
           <label class="search">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 2a8 8 0 1 0 4.9 14.32l5.39 5.39 1.41-1.41-5.39-5.39A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/></svg>
+            <span class="sr-only">Search a city or state</span>
             <input id="searchInput" type="search" placeholder="Search a city or state…" autocomplete="off" />
           </label>
           <div class="seg" id="tierFilter" role="group" aria-label="Filter by tier">
@@ -123,7 +127,7 @@
       </section>
 
       <!-- DIWALI -->
-      <section class="tab-panel" id="panel-diwali" role="tabpanel" hidden>
+      <section class="tab-panel" id="panel-diwali" role="tabpanel" aria-labelledby="tab-diwali" hidden>
         <div class="section-head">
           <span class="eyebrow">Diwali impact study</span>
           <h2>What firecracker night does to the air</h2>
@@ -179,7 +183,7 @@
       </section>
 
       <!-- METHOD -->
-      <section class="tab-panel" id="panel-method" role="tabpanel" hidden>
+      <section class="tab-panel" id="panel-method" role="tabpanel" aria-labelledby="tab-method" hidden>
         <div class="section-head">
           <span class="eyebrow">Transparency</span>
           <h2>Sources, standards &amp; limitations</h2>
