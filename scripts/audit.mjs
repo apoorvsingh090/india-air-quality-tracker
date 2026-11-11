@@ -245,7 +245,9 @@ for (const c of y25.cities) {
   if (c.baselineAqi != null) ok(c.baselineAqi >= 0 && c.baselineAqi <= 500, `2025 ${c.name} baseline in range`);
   if (c.diwaliAqi != null) {
     if (c.diwaliAqi < 0 || c.diwaliAqi > 500) diwaliRange++;
-    if (!close(c.changePct, ((c.diwaliAqi - c.baselineAqi) / c.baselineAqi) * 100, 0.2)) diwaliMath++;
+    // A change is only defined against a pre-Diwali baseline; a city whose
+    // only bulletin is the Diwali night itself has nothing to compare with.
+    if (c.baselineAqi != null && !close(c.changePct, ((c.diwaliAqi - c.baselineAqi) / c.baselineAqi) * 100, 0.2)) diwaliMath++;
   }
 }
 ok(diwaliMath === 0, `2025 change percentages consistent (${diwaliMath} mismatches)`);

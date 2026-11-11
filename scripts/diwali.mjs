@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { CITIES } from "./lib/cities.mjs";
 import { fetchBulletin } from "./lib/cpcb.mjs";
 import { atomicWriteJson } from "./lib/fsx.mjs";
+import { buildYear } from "./lib/diwali.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "data");
@@ -23,13 +24,6 @@ const DIWALI = {
   }
 };
 
-const mean = (a) => {
-  const v = a.filter((x) => x != null && !Number.isNaN(x));
-  return v.length ? v.reduce((x, y) => x + y, 0) / v.length : null;
-};
-const round = (v, d = 1) => (v == null || Number.isNaN(v) ? null : Math.round(v * 10 ** d) / 10 ** d);
-const pct = (now, base) => (now == null || base == null || base === 0 ? null : ((now - base) / base) * 100);
-
 async function loadBulletins(dates) {
   const map = new Map();
   for (const d of dates) {
@@ -43,53 +37,6 @@ async function loadBulletins(dates) {
   return map;
 }
 
-function buildYear(bulletins, impactBulletin) {
-  const baselineByCity = new Map();
-  for (const b of bulletins.values()) {
-    for (const row of b.cities) {
-      if (!baselineByCity.has(row.normalized)) baselineByCity.set(row.normalized, []);
-      baselineByCity.get(row.normalized).push(row.aqi);
-    }
-  }
-  const impactByCity = new Map();
-  if (impactBulletin) for (const row of impactBulletin.cities) impactByCity.set(row.normalized, row);
-
-  const cities = CITIES.map((city) => {
-    const baselineAqi = round(mean(baselineByCity.get(city.id) || []));
-    const impact = impactByCity.get(city.id);
-    const diwaliAqi = impact?.aqi ?? null;
-    return {
-      id: city.id,
-      name: city.name,
-      state: city.state,
-      tier: city.tier,
-      baselineAqi,
-      diwaliAqi,
-      changePct: round(pct(diwaliAqi, baselineAqi)),
-      category: impact?.category ?? null,
-      pollutant: impact?.pollutant ?? null,
-      stations: impact?.stations ?? null,
-      source: impact ? "cpcb" : "pending"
-    };
-  });
-
-  const scored = cities.filter((c) => c.baselineAqi != null && c.diwaliAqi != null);
-  const baselineOnly = cities.filter((c) => c.baselineAqi != null);
-  const summary = {
-    citiesCompared: scored.length,
-    avgBaselineAqi: round(mean(scored.map((c) => c.baselineAqi))),
-    avgBaselineAvailable: round(mean(baselineOnly.map((c) => c.baselineAqi))),
-    avgDiwaliAqi: round(mean(scored.map((c) => c.diwaliAqi))),
-    avgChangePct: round(mean(scored.map((c) => c.changePct))),
-    citiesUp20: scored.filter((c) => c.changePct > 20).length,
-    citiesDown20: scored.filter((c) => c.changePct < -20).length,
-    worst: [...scored].sort((a, b) => b.diwaliAqi - a.diwaliAqi)[0] || null,
-    biggestJump: [...scored].sort((a, b) => b.changePct - a.changePct)[0] || null
-  };
-  cities.sort((a, b) => (b.changePct ?? -999) - (a.changePct ?? -999));
-  return { summary, cities };
-}
-
 async function main() {
   const now = new Date();
   console.log("Diwali study: loading CPCB AQI bulletins...");
@@ -99,8 +46,8 @@ async function main() {
   const [b2025, b2026] = await Promise.all([loadBulletins(dates2025), loadBulletins(dates2026)]);
   console.log(`Bulletins: 2025=${b2025.size}/${dates2025.length}, 2026=${b2026.size}/${dates2026.length}`);
 
-  const y2025 = buildYear(b2025, b2025.get(DIWALI["2025"].impact));
-  const y2026 = buildYear(b2026, b2026.get(DIWALI["2026"].impact));
+  const y2025 = buildYear(CITIES, b2025, DIWALI["2025"].impact);
+  const y2026 = buildYear(CITIES, b2026, DIWALI["2026"].impact);
   const status2026 = b2026.has(DIWALI["2026"].impact) ? "official" : "pending";
 
   const out = {
