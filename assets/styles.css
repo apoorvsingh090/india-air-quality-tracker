@@ -26,6 +26,20 @@
 
 * { box-sizing: border-box; }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
+
 html, body { margin: 0; padding: 0; }
 
 body {
@@ -120,13 +134,12 @@ a:hover { text-decoration: underline; }
 .tabs {
   position: relative;
   z-index: 3;
-  display: flex;
-  gap: 4px;
   max-width: 1400px;
   margin: 6px auto 0;
   padding: 0 clamp(18px, 4vw, 54px);
   border-bottom: 1px solid var(--stroke);
 }
+.tablist { display: flex; gap: 4px; }
 .tab {
   appearance: none;
   background: none;
@@ -269,7 +282,7 @@ main {
   flex: 1;
   background: none;
   border: none;
-  outline: none;
+  border-radius: 6px;
   color: var(--text);
   font: inherit;
   font-size: 14px;
@@ -304,12 +317,13 @@ main {
   height: 44px;
   font-size: 12.5px;
   color: var(--faint);
+  transition: border-color 0.2s;
 }
+.select-wrap:focus-within { border-color: rgba(45, 212, 191, 0.55); }
 .select-wrap select {
   appearance: none;
   background: none;
   border: none;
-  outline: none;
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -428,6 +442,8 @@ main {
 .diwali-stat .s { font-size: 11.5px; color: var(--faint); }
 
 .diwali-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 12px; margin-bottom: 14px; }
+.diwali-grid.single { grid-template-columns: 1fr; }
+.section-head .seg { margin-top: 16px; }
 
 .panel {
   background: rgba(10, 23, 40, 0.76);
@@ -464,12 +480,16 @@ main {
 
 /* TABLE */
 .table-panel { padding-bottom: 6px; }
-.table-scroll { overflow-x: auto; }
+.table-scroll { overflow: auto; max-height: min(72vh, 640px); }
 .data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 720px; }
-.data-table th {
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel-solid);
   text-align: left;
   font-weight: 550;
-  color: var(--faint);
+  color: var(--muted);
   font-size: 10.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;

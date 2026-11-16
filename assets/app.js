@@ -45,7 +45,8 @@ const state = {
   diwali: null,
   search: "",
   tier: "all",
-  sort: "aqi-desc"
+  sort: "aqi-desc",
+  diwaliYearKey: null
 };
 
 function categoryOf(aqi) {
@@ -217,9 +218,35 @@ function renderNational() {
     </div>`).join("");
 }
 
+// Study years, newest first.
+const DIWALI_KEYS = ["y2026", "y2025"];
+
+function diwaliYearOf(key) {
+  return key.replace(/^y/, "");
+}
+
+function diwaliOfficialKeys() {
+  return DIWALI_KEYS.filter((k) => state.diwali?.[k]?.status === "official");
+}
+
+function latestOfficialDiwaliYear() {
+  const key = diwaliOfficialKeys()[0];
+  return key ? diwaliYearOf(key) : null;
+}
+
+// Diwali-night change for a city from the newest official study that has one.
+function diwaliCity(cityId) {
+  for (const key of DIWALI_KEYS) {
+    const y = state.diwali?.[key];
+    if (y?.status !== "official") continue;
+    const row = y.cities?.find((c) => c.id === cityId);
+    if (row?.changePct != null) return { row, year: diwaliYearOf(key) };
+  }
+  return { row: null, year: null };
+}
+
 function cityChange(city) {
-  const d = state.diwali?.y2025?.cities?.find((c) => c.id === city.id);
-  return d?.changePct ?? null;
+  return diwaliCity(city.id).row?.changePct ?? null;
 }
 
 function filteredCities() {
@@ -255,7 +282,7 @@ function renderCities() {
     const pm25 = model?.pollutants?.pm25;
     const pm10 = model?.pollutants?.pm10;
     const trend = history[city.id]?.model?.aqi || [];
-    const change = cityChange(city);
+    const dc = diwaliCity(city.id);
     const srcs = [];
     if (city.bulletin) srcs.push(`<span class="src cpcb" title="Official CPCB daily bulletin">CPCB</span>`);
     if (city.station && !city.station.stale) srcs.push(`<span class="src station" title="${safe(city.station.name || "Live station")}">STATION</span>`);
@@ -284,7 +311,7 @@ function renderCities() {
       </div>
       <div class="city-foot">
         <div class="src-chips">${srcs.join("")}</div>
-        <span class="trend">${change == null ? "" : change > 0 ? `Diwali ’25 +${fmt(change)}%` : `Diwali ’25 ${fmt(change)}%`}</span>
+        <span class="trend">${dc.row == null ? "" : `Diwali ’${dc.year.slice(2)} ${dc.row.changePct > 0 ? "+" : ""}${fmt(dc.row.changePct)}%`}</span>
       </div>`;
     card.addEventListener("click", () => openCity(city));
     grid.appendChild(card);
@@ -293,6 +320,8 @@ function renderCities() {
 
 /* ---------- modal ---------- */
 
+let lastFocused = null;
+
 function openCity(city) {
   const cat = categoryOf(city.aqi);
   const model = city.model;
@@ -300,7 +329,7 @@ function openCity(city) {
   const station = city.station;
   const series = state.history?.cities?.[city.id]?.model || {};
   const change = cityChange(city);
-  const d = state.diwali?.y2025?.cities?.find((c) => c.id === city.id);
+  const { row: d, year: dYear } = diwaliCity(city.id);
 
   const pollBars = POLLUTANTS.map((p) => {
     const val = model?.pollutants?.[p.key];
@@ -368,108 +397,199 @@ function openCity(city) {
       <div class="advisory" style="--accent:${cat.color}">
         <strong>${safe(cat.name)}.</strong> ${safe(ADVISORY[cat.name] || "")}
       </div>
-      ${d?.changePct != null ? `<p class="modal-note">Diwali 2025: AQI moved from a ${fmt(d.baselineAqi)} baseline to ${fmt(d.diwaliAqi)} on the Diwali-night bulletin (${d.changePct > 0 ? "+" : ""}${fmt(d.changePct)}%).</p>` : ""}
+      ${d?.changePct != null ? `<p class="modal-note">Diwali ${dYear}: AQI moved from a ${fmt(d.baselineAqi)} baseline to ${fmt(d.diwaliAqi)} on the Diwali-night bulletin (${d.changePct > 0 ? "+" : ""}${fmt(d.changePct)}%).</p>` : ""}
       ${change != null && !d ? "" : ""}
     </div>
   `;
+  lastFocused = document.activeElement;
   $("#cityModal").hidden = false;
   document.body.style.overflow = "hidden";
+  setBackgroundInert(true);
   $(".modal-close")?.focus();
 }
 
 function closeModal() {
   $("#cityModal").hidden = true;
   document.body.style.overflow = "";
+  setBackgroundInert(false);
+  if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
+  lastFocused = null;
+}
+
+function setBackgroundInert(on) {
+  for (const node of $$("body > header, body > nav, body > main, body > footer")) node.inert = on;
+}
+
+function trapModalFocus(e) {
+  if (e.key !== "Tab") return;
+  const modal = $("#cityModal");
+  const focusable = $$("a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex='-1'])", modal).filter(
+    (n) => n.offsetParent !== null
+  );
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && (document.activeElement === first || document.activeElement === modal)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 /* ---------- diwali ---------- */
+
+function pendingCountdown(Y) {
+  const istToday = new Date(Date.now() + 19800000).toISOString().slice(0, 10);
+  const dayDiff = Math.round((new Date(`${Y.date}T00:00:00Z`) - new Date(`${istToday}T00:00:00Z`)) / 86400000);
+  const title =
+    dayDiff > 1 ? `Diwali is in ${dayDiff} days` : dayDiff === 1 ? "Diwali is tomorrow" : dayDiff === 0 ? "Diwali is tonight" : "Diwali was last night";
+  const bulletinDay = Y.impactDate ? dateIST(Y.impactDate) : "the D+1 bulletin";
+  const copy =
+    dayDiff > 0
+      ? `The CPCB bulletin covering Diwali night is published on ${bulletinDay}, evening. This panel fills in automatically — no action needed.`
+      : `The CPCB bulletin covering Diwali night is due on ${bulletinDay}, evening. This panel fills in automatically — no action needed.`;
+  return { title, copy };
+}
+
+function pendingCard(Y, year, ref) {
+  const { title, copy } = pendingCountdown(Y);
+  return `
+    <div class="pending-card">
+      <div class="ring">◔</div>
+      <h4>${title}</h4>
+      <p>${copy}</p>
+      <div class="pending-list">
+        <div><span>${year} pre-Diwali baseline</span><b>${fmt(Y.summary.avgBaselineAvailable ?? Y.summary.avgBaselineAqi)} AQI</b></div>
+        <div><span>Cities tracked</span><b>${Y.cities.filter((c) => c.baselineAqi != null).length}</b></div>
+        <div><span>Live national AQI now</span><b>${fmt(state.latest?.national?.avgAqi)}</b></div>
+        ${ref ? `<div><span>Diwali ${ref.year} average jump</span><b>${ref.summary.avgChangePct == null ? "—" : `${ref.summary.avgChangePct > 0 ? "+" : ""}${fmt(ref.summary.avgChangePct, 1)}%`}</b></div>` : ""}
+      </div>
+    </div>`;
+}
+
+function renderDiwaliYearToggle(keys) {
+  const box = $("#diwaliYearFilter");
+  box.innerHTML = keys.map((k) => {
+    const y = diwaliYearOf(k);
+    const active = k === state.diwaliYearKey;
+    return `<button type="button" class="seg-btn${active ? " is-active" : ""}" data-year="${y}" aria-pressed="${active}">${y}</button>`;
+  }).join("");
+  box.hidden = keys.length < 2;
+}
+
+function renderDiwaliMain(Y, year) {
+  const s = Y.summary;
+  if (Y.status !== "official") {
+    const refKey = diwaliOfficialKeys()[0];
+    const ref = refKey ? { year: diwaliYearOf(refKey), summary: state.diwali[refKey].summary } : null;
+    $("#diwaliHero").innerHTML = `<div class="panel" style="grid-column:1/-1">${pendingCard(Y, year, ref)}</div>`;
+    return;
+  }
+  const biggest = s.biggestJump;
+  $("#diwaliHero").innerHTML = `
+    <div class="diwali-big">
+      <div class="kicker">Diwali ${year} · ${dateIST(Y.date)}</div>
+      <div class="huge">${s.avgChangePct > 0 ? "+" : ""}${fmt(s.avgChangePct, 1)}<small>% mean per-city change</small></div>
+      <p>Across <strong>${s.citiesCompared} cities</strong>, the official Diwali-night AQI averaged ${fmt(s.avgDiwaliAqi)} against a ${fmt(s.avgBaselineAqi)} pre-Diwali baseline. Firecracker night made the air worse in ${s.citiesUp20} of them by more than 20%.</p>
+    </div>
+    <div class="diwali-stat">
+      <div class="k">Biggest jump</div>
+      <div class="v">${safe(biggest?.name || "—")}</div>
+      <div class="s">${biggest ? `AQI ${fmt(biggest.baselineAqi)} → ${fmt(biggest.diwaliAqi)} · ${biggest.changePct > 0 ? "+" : ""}${fmt(biggest.changePct, 1)}%` : ""}</div>
+    </div>
+    <div class="diwali-stat">
+      <div class="k">Worst Diwali-night AQI</div>
+      <div class="v">${fmt(s.worst?.diwaliAqi)}</div>
+      <div class="s">${safe(s.worst?.name || "—")} · ${safe(s.worst?.category || "")}</div>
+    </div>`;
+}
+
+function renderDiwaliChart(Y, year) {
+  $("#diwaliChartTitle").textContent = `Biggest AQI jumps · Diwali ${year}`;
+  if (Y.status !== "official") {
+    $("#diwaliChart").innerHTML = `<p class="muted">Official Diwali-night values will appear here once the D+1 bulletin is published.</p>`;
+    return;
+  }
+  const top = Y.cities.filter((c) => c.changePct != null).slice(0, 15);
+  const max = Math.max(20, ...top.map((c) => Math.max(0, c.changePct)));
+  $("#diwaliChart").innerHTML = top.map((c) => {
+    const cat = categoryOf(c.diwaliAqi);
+    const w = Math.max(3, (Math.max(0, c.changePct) / max) * 100);
+    const sign = c.changePct > 0 ? "+" : "";
+    return `<div class="bar-row">
+      <span class="nm" title="${safe(c.name)}: AQI ${fmt(c.baselineAqi)} → ${fmt(c.diwaliAqi)} (${sign}${fmt(c.changePct, 1)}%)">${safe(c.name)}</span>
+      <span class="track"><span class="fill" style="width:${w.toFixed(1)}%;--bc:${cat.color}"></span></span>
+      <span class="val">${sign}${fmt(c.changePct, 1)}%</span>
+    </div>`;
+  }).join("") + `<div class="chart-axis"><span>0%</span><span>+${fmt(max)}%</span></div>`;
+}
+
+function renderDiwaliSide(other, otherKey, ref) {
+  const panel = $("#diwaliSidePanel");
+  if (!other) {
+    panel.hidden = true;
+    $("#diwaliGrid").classList.add("single");
+    return;
+  }
+  panel.hidden = false;
+  $("#diwaliGrid").classList.remove("single");
+  const oyear = diwaliYearOf(otherKey);
+  const os = other.summary;
+  $("#diwaliSideTitle").textContent = `Diwali ${oyear} · at a glance`;
+  $("#diwaliSideStatus").textContent = other.status === "official" ? "Official CPCB data" : "Pending bulletin";
+  const body = $("#diwaliSideBody");
+  if (other.status === "official") {
+    const jump = os.biggestJump;
+    body.innerHTML = `
+      <div class="diwali-stat" style="border:none;padding:0;background:none">
+        <div class="k">Average change · Diwali ${oyear}</div>
+        <div class="v" style="color:${os.avgChangePct > 0 ? "#fca5a5" : "#86efac"}">${os.avgChangePct > 0 ? "+" : ""}${fmt(os.avgChangePct, 1)}%</div>
+        <div class="s">${os.citiesCompared} cities · ${os.citiesUp20} up more than 20%</div>
+      </div>
+      <div class="pending-list">
+        <div><span>Average baseline</span><b>${fmt(os.avgBaselineAqi)}</b></div>
+        <div><span>Average Diwali-night AQI</span><b>${fmt(os.avgDiwaliAqi)}</b></div>
+        <div><span>Worst city</span><b>${safe(os.worst?.name || "—")} · ${fmt(os.worst?.diwaliAqi)}</b></div>
+        <div><span>Biggest jump</span><b>${safe(jump?.name || "—")} · ${jump?.changePct == null ? "—" : `${jump.changePct > 0 ? "+" : ""}${fmt(jump.changePct, 1)}%`}</b></div>
+      </div>`;
+  } else {
+    body.innerHTML = pendingCard(other, oyear, ref);
+  }
+}
 
 function renderDiwali() {
   const d = state.diwali;
   if (!d) {
     $("#diwaliHero").innerHTML = `<div class="panel"><p class="muted">Diwali study data is not available yet.</p></div>`;
+    $("#diwaliYearFilter").innerHTML = "";
+    $("#diwaliChart").innerHTML = "";
+    $("#diwaliTable tbody").innerHTML = "";
+    renderDiwaliSide(null);
     return;
   }
-  const y25 = d.y2025;
-  const y26 = d.y2026;
-  const s25 = y25.summary;
-
-  const biggest = s25.biggestJump;
-  $("#diwaliHero").innerHTML = `
-    <div class="diwali-big">
-      <div class="kicker">Diwali 2025 · ${dateIST(y25.date)}</div>
-      <div class="huge">${s25.avgChangePct > 0 ? "+" : ""}${fmt(s25.avgChangePct, 1)}<small>% average AQI</small></div>
-      <p>Across <strong>${s25.citiesCompared} cities</strong>, the official Diwali-night AQI rose from a ${fmt(s25.avgBaselineAqi)} pre-Diwali baseline to ${fmt(s25.avgDiwaliAqi)}. Firecracker night made the air worse in ${s25.citiesUp20} of them by more than 20%.</p>
-    </div>
-    <div class="diwali-stat">
-      <div class="k">Biggest jump</div>
-      <div class="v">${safe(biggest?.name || "—")}</div>
-      <div class="s">${biggest ? `AQI ${fmt(biggest.baselineAqi)} → ${fmt(biggest.diwaliAqi)} · +${fmt(biggest.changePct, 1)}%` : ""}</div>
-    </div>
-    <div class="diwali-stat">
-      <div class="k">Worst Diwali-night AQI</div>
-      <div class="v">${fmt(s25.worst?.diwaliAqi)}</div>
-      <div class="s">${safe(s25.worst?.name || "—")} · ${safe(s25.worst?.category || "")}</div>
-    </div>`;
-
-  // top 15 chart
-  const top = y25.cities.filter((c) => c.changePct != null).slice(0, 15);
-  const max = Math.max(20, ...top.map((c) => Math.max(0, c.changePct)));
-  $("#diwaliChart").innerHTML = top.map((c) => {
-    const cat = categoryOf(c.diwaliAqi);
-    const w = Math.max(3, (Math.max(0, c.changePct) / max) * 100);
-    return `<div class="bar-row">
-      <span class="nm" title="${safe(c.name)}">${safe(c.name)}</span>
-      <span class="track"><span class="fill" style="width:${w.toFixed(1)}%;--bc:${cat.color}"></span></span>
-      <span class="val">${c.changePct > 0 ? "+" : ""}${fmt(c.changePct, 1)}%</span>
-    </div>`;
-  }).join("") + `<div class="chart-axis"><span>0%</span><span>+${fmt(max)}%</span></div>`;
-
-  // 2026 panel
-  const body = $("#diwali2026Body");
-  if (y26.status === "official") {
-    const s = y26.summary;
-    const jump = s.biggestJump;
-    body.innerHTML = `
-      <div class="diwali-stat" style="border:none;padding:0;background:none">
-        <div class="k">Average change · Diwali 2026</div>
-        <div class="v" style="color:${s.avgChangePct > 0 ? "#fca5a5" : "#86efac"}">${s.avgChangePct > 0 ? "+" : ""}${fmt(s.avgChangePct, 1)}%</div>
-        <div class="s">${s.citiesCompared} cities · ${s.citiesUp20} up more than 20%</div>
-      </div>
-      <div class="pending-list">
-        <div><span>Average baseline</span><b>${fmt(s.avgBaselineAqi)}</b></div>
-        <div><span>Average Diwali-night AQI</span><b>${fmt(s.avgDiwaliAqi)}</b></div>
-        <div><span>Worst city</span><b>${safe(s.worst?.name || "—")} · ${fmt(s.worst?.diwaliAqi)}</b></div>
-        <div><span>Biggest jump</span><b>${safe(jump?.name || "—")} · +${fmt(jump?.changePct, 1)}%</b></div>
-      </div>`;
-  } else {
-    const istToday = new Date(Date.now() + 19800000).toISOString().slice(0, 10);
-    const dayDiff = Math.round((new Date(`${y26.date}T00:00:00Z`) - new Date(`${istToday}T00:00:00Z`)) / 86400000);
-    const pendingTitle =
-      dayDiff > 1 ? `Diwali is in ${dayDiff} days` : dayDiff === 1 ? "Diwali is tomorrow" : dayDiff === 0 ? "Diwali is tonight" : "Diwali was last night";
-    const pendingCopy =
-      dayDiff > 0
-        ? "The CPCB bulletin covering Diwali night is published on 9 Nov 2026, evening. This panel fills in automatically — no action needed."
-        : "The CPCB bulletin covering Diwali night is due on 9 Nov 2026, evening. This panel fills in automatically — no action needed.";
-    body.innerHTML = `
-      <div class="pending-card">
-        <div class="ring">◔</div>
-        <h4>${pendingTitle}</h4>
-        <p>${pendingCopy}</p>
-        <div class="pending-list">
-          <div><span>2026 pre-Diwali baseline</span><b>${fmt(y26.summary.avgBaselineAvailable ?? y26.summary.avgBaselineAqi)} AQI</b></div>
-          <div><span>Cities tracked</span><b>${y26.cities.filter((c) => c.baselineAqi != null).length}</b></div>
-          <div><span>Live national AQI now</span><b>${fmt(state.latest?.national?.avgAqi)}</b></div>
-          <div><span>Diwali 2025 average jump</span><b>+${fmt(s25.avgChangePct, 1)}%</b></div>
-        </div>
-      </div>`;
+  const keys = DIWALI_KEYS.filter((k) => d[k]?.date);
+  if (!keys.includes(state.diwaliYearKey)) {
+    state.diwaliYearKey = diwaliOfficialKeys()[0] || keys[0] || null;
   }
-  $("#diwali2026Status").textContent = y26.status === "official" ? "Official CPCB data" : "Pending bulletin";
+  if (!state.diwaliYearKey) return;
+  renderDiwaliYearToggle(keys);
+
+  const Y = d[state.diwaliYearKey];
+  const year = diwaliYearOf(state.diwaliYearKey);
+  const s = Y.summary;
+  const otherKey = keys.find((k) => k !== state.diwaliYearKey);
+  const other = otherKey ? d[otherKey] : null;
+
+  renderDiwaliMain(Y, year);
+  renderDiwaliChart(Y, year);
+  renderDiwaliSide(other, otherKey, { year, summary: s });
 
   // table
   const tbody = $("#diwaliTable tbody");
-  const rows = y25.cities.filter((c) => c.diwaliAqi != null);
-  tbody.innerHTML = rows.map((c) => {
+  const rows = Y.status === "official" ? Y.cities.filter((c) => c.diwaliAqi != null) : [];
+  tbody.innerHTML = rows.length ? rows.map((c) => {
     const cat = categoryOf(c.diwaliAqi);
     const cls = c.changePct > 2 ? "delta-up" : c.changePct < -2 ? "delta-down" : "delta-flat";
     return `<tr>
@@ -477,12 +597,13 @@ function renderDiwali() {
       <td>T${c.tier}</td>
       <td class="num">${fmt(c.baselineAqi)}</td>
       <td class="num">${fmt(c.diwaliAqi)}</td>
-      <td class="num ${cls}">${c.changePct > 0 ? "+" : ""}${fmt(c.changePct, 1)}%</td>
+      <td class="num ${cls}">${c.changePct == null ? "—" : `${c.changePct > 0 ? "+" : ""}${fmt(c.changePct, 1)}%`}</td>
       <td><span class="pill" style="--pc:${cat.color}">${safe(c.category || categoryOf(c.diwaliAqi).name)}</span></td>
     </tr>`;
-  }).join("");
+  }).join("") : `<tr><td colspan="6" class="muted">No official Diwali-night values published yet.</td></tr>`;
 
-  const coverage = ` ${y25.summary.citiesCompared} of ${y25.cities.length} cities had an official Diwali-night value.`;
+  $("#diwaliCaption").textContent = `Diwali ${year} · pre-Diwali baseline vs Diwali-night bulletin${Y.impactDate ? ` (${dateIST(Y.impactDate)})` : ""}`;
+  const coverage = ` ${s.citiesCompared} of ${Y.cities.length} cities had an official Diwali-night value.`;
   $("#diwaliMethod").innerHTML = `<b>How this is measured.</b> ${safe(d.method.impact)} Baseline: ${safe(d.method.baseline)} ${safe(d.method.caveat)}${safe(coverage)} Source: ${safe(d.method.source)}`;
 }
 
@@ -535,6 +656,11 @@ async function init() {
     state.latest = latest;
     state.history = history;
     state.diwali = diwali;
+    const latestYear = latestOfficialDiwaliYear();
+    if (latestYear) {
+      const opt = $('#sortSelect option[value="change-desc"]');
+      if (opt) opt.textContent = `Biggest Diwali jump (${latestYear})`;
+    }
     setUpdated();
     renderNational();
     renderCities();
@@ -549,16 +675,31 @@ async function init() {
 
 /* ---------- events ---------- */
 
-$$(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    $$(".tab").forEach((b) => {
-      b.classList.toggle("is-active", b === btn);
-      b.setAttribute("aria-selected", String(b === btn));
-    });
-    $$(".tab-panel").forEach((p) => {
-      p.hidden = p.id !== `panel-${btn.dataset.tab}`;
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+const tabs = $$(".tab");
+
+function selectTab(btn, { scroll = false } = {}) {
+  for (const b of tabs) {
+    const active = b === btn;
+    b.classList.toggle("is-active", active);
+    b.setAttribute("aria-selected", String(active));
+    b.tabIndex = active ? 0 : -1;
+  }
+  for (const p of $$(".tab-panel")) p.hidden = p.id !== `panel-${btn.dataset.tab}`;
+  if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+tabs.forEach((btn, i) => {
+  btn.addEventListener("click", () => selectTab(btn, { scroll: true }));
+  btn.addEventListener("keydown", (e) => {
+    let next = null;
+    if (e.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
+    else if (e.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
+    else if (e.key === "Home") next = tabs[0];
+    else if (e.key === "End") next = tabs[tabs.length - 1];
+    if (!next) return;
+    e.preventDefault();
+    selectTab(next);
+    next.focus();
   });
 });
 
@@ -575,6 +716,14 @@ $$("#tierFilter .seg-btn").forEach((btn) => {
   });
 });
 
+$("#diwaliYearFilter")?.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-year]");
+  if (!btn || `y${btn.dataset.year}` === state.diwaliYearKey) return;
+  state.diwaliYearKey = `y${btn.dataset.year}`;
+  renderDiwali();
+  $("#diwaliYearFilter .seg-btn.is-active")?.focus();
+});
+
 $("#sortSelect")?.addEventListener("change", (e) => {
   state.sort = e.target.value;
   renderCities();
@@ -583,6 +732,7 @@ $("#sortSelect")?.addEventListener("change", (e) => {
 $("#cityModal")?.addEventListener("click", (e) => {
   if (e.target.closest("[data-close='modal']")) closeModal();
 });
+$("#cityModal")?.addEventListener("keydown", trapModalFocus);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$("#cityModal").hidden) closeModal();
 });

@@ -20,12 +20,12 @@ Using the official CPCB bulletins for 13–19 October 2025 (baseline) and 21 Oct
 
 | Metric | Value |
 | --- | --- |
-| Cities compared | 66 |
-| Average pre-Diwali AQI | 123 |
-| Average Diwali-night AQI | 177 |
-| Average change | **+42.6%** |
-| Cities up more than 20% | **48 of 66** |
-| Biggest jump | Amritsar: 86 → 224 (+159%) |
+| Cities compared | 64 |
+| Average pre-Diwali AQI | 114 |
+| Average Diwali-night AQI | 178 |
+| Average change | **+63.0%** |
+| Cities up more than 20% | **48 of 64** |
+| Biggest jump | Salem: 29 → 173 (+497%) |
 | Worst Diwali-night AQI | Rohtak: 376 (Very Poor) |
 
 > AQI is a 24-hour city average, so it smooths the sharpest hourly firecracker peaks. The study measures the sustained city-wide effect, not the single worst hour. Diwali 2025 was observed on 20 October in most of India (some communities on 21 October); the 21 October bulletin covers the 20 October night.

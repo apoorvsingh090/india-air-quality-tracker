@@ -50,19 +50,22 @@
       </div>
     </header>
 
-    <nav class="tabs" role="tablist" aria-label="Views">
-      <button class="tab is-active" data-tab="dashboard" role="tab" aria-selected="true">Live dashboard</button>
-      <button class="tab" data-tab="diwali" role="tab" aria-selected="false">Diwali impact</button>
-      <button class="tab" data-tab="method" role="tab" aria-selected="false">Sources &amp; method</button>
+    <nav class="tabs">
+      <div class="tablist" role="tablist" aria-label="Views">
+        <button class="tab is-active" id="tab-dashboard" data-tab="dashboard" role="tab" aria-selected="true" aria-controls="panel-dashboard" tabindex="0">Live dashboard</button>
+        <button class="tab" id="tab-diwali" data-tab="diwali" role="tab" aria-selected="false" aria-controls="panel-diwali" tabindex="-1">Diwali impact</button>
+        <button class="tab" id="tab-method" data-tab="method" role="tab" aria-selected="false" aria-controls="panel-method" tabindex="-1">Sources &amp; method</button>
+      </div>
     </nav>
 
     <main>
+      <h1 class="sr-only">India Air Quality Tracker — live CPCB air quality across 84 Indian cities</h1>
       <!-- DASHBOARD -->
-      <section class="tab-panel" id="panel-dashboard" role="tabpanel">
+      <section class="tab-panel" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
         <div class="hero">
           <div class="hero-copy">
             <span class="eyebrow">National AQI monitor</span>
-            <h2>How clean is the air<br />in India right now?</h2>
+            <h2>How clean is the air<br /> in India right now?</h2>
             <p>
               Official CPCB city AQI, station cross-checks and the CAMS model — merged into one view across
               <strong>84 tier 1, 2 and 3 cities</strong>. Headline values use the CPCB National AQI (24-hour average).
@@ -94,6 +97,7 @@
         <div class="controls">
           <label class="search">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 2a8 8 0 1 0 4.9 14.32l5.39 5.39 1.41-1.41-5.39-5.39A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/></svg>
+            <span class="sr-only">Search a city or state</span>
             <input id="searchInput" type="search" placeholder="Search a city or state…" autocomplete="off" />
           </label>
           <div class="seg" id="tierFilter" role="group" aria-label="Filter by tier">
@@ -107,7 +111,7 @@
             <select id="sortSelect">
               <option value="aqi-desc">Most polluted</option>
               <option value="aqi-asc">Cleanest</option>
-              <option value="change-desc">Biggest Diwali jump (2025)</option>
+              <option value="change-desc">Biggest Diwali jump (2026)</option>
               <option value="name-asc">City name</option>
             </select>
           </label>
@@ -123,51 +127,53 @@
       </section>
 
       <!-- DIWALI -->
-      <section class="tab-panel" id="panel-diwali" role="tabpanel" hidden>
+      <section class="tab-panel" id="panel-diwali" role="tabpanel" aria-labelledby="tab-diwali" hidden>
         <div class="section-head">
           <span class="eyebrow">Diwali impact study</span>
           <h2>What firecracker night does to the air</h2>
           <p>
-            Diwali 2025 fell on <strong>20 October</strong>. We compare each city's official CPCB AQI on the Diwali-night
-            bulletin (24-hour average) with its own average over the seven previous days. Diwali 2026 is on
-            <strong>8 November</strong>; its results will populate automatically after the 9 November bulletin.
+            Diwali 2026 fell on <strong>8 November</strong>; Diwali 2025 on <strong>20 October</strong>. We compare
+            each city's official CPCB AQI on the Diwali-night bulletin (24-hour average) with its own average over
+            the seven previous days. Both editions below use official CPCB bulletins.
           </p>
+          <div class="seg" id="diwaliYearFilter" role="group" aria-label="Diwali year"></div>
         </div>
 
-        <div id="diwaliHero" class="diwali-hero"></div>
+        <div id="diwaliHero" class="diwali-hero" aria-live="polite" aria-atomic="true"></div>
 
-        <div class="diwali-grid">
+        <div class="diwali-grid" id="diwaliGrid">
           <div class="panel">
             <div class="panel-head">
-              <h3>Biggest AQI jumps · Diwali 2025</h3>
+              <h3 id="diwaliChartTitle">Biggest AQI jumps · Diwali 2026</h3>
               <span class="muted">% change vs. 7-day pre-Diwali baseline</span>
             </div>
             <div id="diwaliChart" class="chart-wrap"></div>
           </div>
-          <div class="panel" id="diwali2026Panel">
+          <div class="panel" id="diwaliSidePanel">
             <div class="panel-head">
-              <h3>Diwali 2026 · live status</h3>
-              <span class="muted" id="diwali2026Status">Pending</span>
+              <h3 id="diwaliSideTitle">Diwali 2025 · at a glance</h3>
+              <span class="muted" id="diwaliSideStatus">Official CPCB data</span>
             </div>
-            <div id="diwali2026Body"></div>
+            <div id="diwaliSideBody"></div>
           </div>
         </div>
 
         <div class="panel table-panel">
           <div class="panel-head">
-            <h3>City-by-city results</h3>
+            <h3 id="diwaliTableTitle">City-by-city results</h3>
             <span class="muted">Official CPCB bulletin values</span>
           </div>
-          <div class="table-scroll">
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="diwaliTableTitle">
             <table class="data-table" id="diwaliTable">
+              <caption class="sr-only" id="diwaliCaption">City-by-city official CPCB results</caption>
               <thead>
                 <tr>
-                  <th>City</th>
-                  <th>Tier</th>
-                  <th class="num">Pre-Diwali AQI</th>
-                  <th class="num">Diwali-night AQI</th>
-                  <th class="num">Change</th>
-                  <th>Category on Diwali</th>
+                  <th scope="col">City</th>
+                  <th scope="col">Tier</th>
+                  <th scope="col" class="num">Pre-Diwali AQI</th>
+                  <th scope="col" class="num">Diwali-night AQI</th>
+                  <th scope="col" class="num">Change</th>
+                  <th scope="col">Category on Diwali</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -179,7 +185,7 @@
       </section>
 
       <!-- METHOD -->
-      <section class="tab-panel" id="panel-method" role="tabpanel" hidden>
+      <section class="tab-panel" id="panel-method" role="tabpanel" aria-labelledby="tab-method" hidden>
         <div class="section-head">
           <span class="eyebrow">Transparency</span>
           <h2>Sources, standards &amp; limitations</h2>
