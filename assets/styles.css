@@ -442,6 +442,8 @@ main {
 .diwali-stat .s { font-size: 11.5px; color: var(--faint); }
 
 .diwali-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 12px; margin-bottom: 14px; }
+.diwali-grid.single { grid-template-columns: 1fr; }
+.section-head .seg { margin-top: 16px; }
 
 .panel {
   background: rgba(10, 23, 40, 0.76);
@@ -478,12 +480,16 @@ main {
 
 /* TABLE */
 .table-panel { padding-bottom: 6px; }
-.table-scroll { overflow-x: auto; }
+.table-scroll { overflow: auto; max-height: min(72vh, 640px); }
 .data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 720px; }
-.data-table th {
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel-solid);
   text-align: left;
   font-weight: 550;
-  color: var(--faint);
+  color: var(--muted);
   font-size: 10.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
